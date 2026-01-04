@@ -1,7 +1,7 @@
-all: test_c test_cpp
+all: test_c test_cc
 
 test_c:
-	gcc -o test_c.exe main.c -Wall -Wextra -DVALHALLOC_ENABLE
+	gcc -o tests/test_c.exe tests/main.c tests/separatefile.c -Wall -Wextra -DVALHALLOC_ENABLE
 
-test_cpp:
-	g++ -o test_cpp.exe main.cpp -Wall -Wextra -DVALHALLOC_ENABLE
+test_cc:
+	g++ -o tests/test_cc.exe tests/main.cc tests/separatefile.cc -Wall -Wextra -DVALHALLOC_ENABLE

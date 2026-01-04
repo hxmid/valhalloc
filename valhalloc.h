@@ -219,8 +219,17 @@ extern "C" {
         memset( allocation, 0xDD, vh_a->size );
         free( allocation );
     }
-#  ifdef __cplusplus
+#   ifdef __cplusplus
 }
+#   endif // __cplusplus
+
+#  endif // VALHALLOC_IMPLEMENTATION
+
+#  ifndef __cplusplus
+#   define malloc(size)               valhalloc_alloc(size, __FILE__, __LINE__)
+#   define realloc(allocation, size)  valhalloc_realloc(allocation, size, __FILE__, __LINE__)
+#   define free(allocation)           valhalloc_dealloc(allocation, __FILE__, __LINE__)
+#  else //__cpluplus
 inline void* operator new( size_t size, const char* file, int line ) {
     return valhalloc_alloc( size, file, line );
 }
@@ -244,18 +253,9 @@ inline void operator delete( void* ptr, size_t ) noexcept {
 inline void operator delete[]( void* ptr, size_t ) noexcept {
     valhalloc_dealloc( ptr, "<delete[] sized>", 0 );
 }
-
 #   define VH_NEW new(__FILE__, __LINE__)
 #   define VH_DELETE delete
 #   define VH_REALLOC(allocation, size) valhalloc_realloc( allocation, size, __FILE__, __LINE__ )
-#  endif // __cplusplus
-
-
-#  endif // VALHALLOC_IMPLEMENTATION
-#  ifndef __cplusplus
-#   define malloc(size)               valhalloc_alloc(size, __FILE__, __LINE__)
-#   define realloc(allocation, size)  valhalloc_realloc(allocation, size, __FILE__, __LINE__)
-#   define free(allocation)           valhalloc_dealloc(allocation, __FILE__, __LINE__)
 #  endif // __cplusplus
 # endif // VALHALLOC_ENABLE
 # else // VALHALLOC_ENABLE

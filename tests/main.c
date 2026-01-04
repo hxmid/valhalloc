@@ -1,6 +1,8 @@
 #define VALHALLOC_IMPLEMENTATION
 
-#include "valhalloc.h"
+#include "../valhalloc.h"
+
+void do_an_allocation( void );
 
 int main( void ) {
     valhalloc_init();
@@ -10,6 +12,7 @@ int main( void ) {
     allocation = realloc( allocation, 20 );
     printf( allocation );
     free( allocation );
+    do_an_allocation();
     valhalloc_deinit();
     return 0;
 }
