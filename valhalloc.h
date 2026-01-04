@@ -19,15 +19,18 @@ extern void  valhalloc_comment( void* allocation, char* comment );
 #  ifdef VALHALLOC_IMPLEMENTED
 #   error "[VALHALLOC FATAL]: defined VALHALLOC_IMPLEMENTATION in multiple files!!"
 #  endif // VALHALLOC_IMPLEMENTED
-#  ifdef malloc
-#   undef malloc
-#  endif // malloc
-#  ifdef realloc
-#   undef realloc
-#  endif // realloc
-#  ifdef free
-#   undef free
-#  endif // free
+#  ifndef __cplusplus
+#   ifdef malloc
+#    undef malloc
+#   endif // malloc
+#   ifdef realloc
+#    undef realloc
+#   endif // realloc
+#   ifdef free
+#    undef free
+#   endif // free
+#  endif // __cplusplus
+
 typedef struct {
     char* file;
     uint64_t line;
@@ -191,13 +194,15 @@ void valhalloc_dealloc( void* allocation, const char* file, uint64_t line ) {
         return;
     }
     printf( "[VALHALLOC STATUS]: deallocating %p @ %s:%llu\n", allocation, file, line );
-    valhalloc_logammend( allocation, NULL, NULL, 0, true );
-    memset( allocation, 0xDD, a->size );
+    valhallocation_t* vh_a = valhalloc_logammend( allocation, NULL, NULL, 0, true );
+    memset( allocation, 0xDD, vh_a->size );
     free( allocation );
 }
 #  endif // VALHALLOC_IMPLEMENTATION
-#  define malloc(size)               valhalloc_alloc(size, __FILE__, __LINE__)
-#  define realloc(allocation, size)  valhalloc_realloc(allocation, size, __FILE__, __LINE__)
-#  define free(allocation)           valhalloc_dealloc(allocation, __FILE__, __LINE__)
+#  ifndef __cplusplus
+#   define malloc(size)               valhalloc_alloc(size, __FILE__, __LINE__)
+#   define realloc(allocation, size)  valhalloc_realloc(allocation, size, __FILE__, __LINE__)
+#   define free(allocation)           valhalloc_dealloc(allocation, __FILE__, __LINE__)
+#  endif // __cplusplus
 # endif // VALHALLOC_ENABLE
 #endif // VALHALLOC_H
