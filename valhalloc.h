@@ -22,53 +22,49 @@
 # endif //__cplusplus
 
 # ifdef VALHALLOC_ENABLE
-VH_EXTERN_C void  valhalloc_init( FILE* file );
-VH_EXTERN_C void  valhalloc_logset( const char* filename );
-VH_EXTERN_C void  valhalloc_deinit( void );
+typedef struct {
+    char* file;
+    uint64_t line;
+    char* comment;
+    uint64_t prevsize;
+    uint64_t size;
+    void* pointer;
+    bool freed;
+} valhallocation_t;
+VH_EXTERN_C void valhalloc_init( FILE* file );
+VH_EXTERN_C void valhalloc_logset( const char* filename );
+VH_EXTERN_C void valhalloc_deinit( void );
 VH_EXTERN_C void* valhalloc_alloc( uint64_t size, const char* file, uint64_t line );
 VH_EXTERN_C void* valhalloc_realloc( void* allocation, uint64_t size, const char* file, uint64_t line );
-VH_EXTERN_C void  valhalloc_dealloc( void* allocation, const char* file, uint64_t line );
-VH_EXTERN_C void  valhalloc_comment( void* allocation, const char* comment );
-VH_EXTERN_C void  valhalloc_status( const char* file, uint64_t line );
-#  undef VH_EXTERN_C
-#  ifdef VALHALLOC_IMPLEMENTATION
-
-#  ifdef VALHALLOC_IMPLEMENTED
-#   error "[VALHALLOC FATAL]: defined VALHALLOC_IMPLEMENTATION in multiple files!!"
-#  endif // VALHALLOC_IMPLEMENTED
-
-#  ifdef malloc
-#   undef malloc
-#  endif // malloc
-#  ifdef realloc
-#   undef realloc
-#  endif // realloc
-#  ifdef free
-#   undef free
-#  endif // free
-
+VH_EXTERN_C void valhalloc_dealloc( void* allocation, const char* file, uint64_t line );
+VH_EXTERN_C void valhalloc_comment( void* allocation, const char* comment );
+VH_EXTERN_C void valhalloc_status( const char* file, uint64_t line );
+VH_EXTERN_C valhallocation_t* valhalloc_logammend( void* pointer, void* newpointer, const char* comment, uint64_t size, bool freed );
+VH_EXTERN_C valhallocation_t* valhalloc_logadd( void* pointer, char* comment, uint64_t size, const char* file, uint64_t line );
 #  ifdef __cplusplus
-extern "C" {
+void valhalloc_new( void* allocation, uint64_t size, const char* file, uint64_t line );
+void valhalloc_delete( void* allocation, const char* file, uint64_t line );
 #  endif // __cplusplus
+#  undef VH_EXTERN_C
 
-    typedef struct {
-        char* file;
-        uint64_t line;
-        char* comment;
-        uint64_t prevsize;
-        uint64_t size;
-        void* pointer;
-        bool freed;
-    } valhallocation_t;
+typedef struct {
+    valhallocation_t* allocations;
+    uint64_t size;
+    uint64_t capacity;
+    FILE* file;
+} valhallocations_t;
 
-    typedef struct {
-        valhallocation_t* allocations;
-        uint64_t size;
-        uint64_t capacity;
-        FILE* file;
-    } valhallocations_t;
+extern valhallocations_t vh_valhallocations;
 
-    static valhallocations_t vh_valhallocations;
+#  ifdef VALHALLOC_IMPLEMENTATION
+#   ifdef VALHALLOC_IMPLEMENTED
+#    error "[VALHALLOC FATAL]: defined VALHALLOC_IMPLEMENTATION in multiple files!!"
+#   endif // VALHALLOC_IMPLEMENTED
+valhallocations_t vh_valhallocations;
+
+#   ifdef __cplusplus
+extern "C" {
+#   endif // __cplusplus
 
     void valhalloc_init( FILE* file ) {
         vh_valhallocations.allocations = (valhallocation_t*)calloc( 1, sizeof * vh_valhallocations.allocations );
@@ -129,7 +125,7 @@ extern "C" {
         return NULL;
     }
 
-    static valhallocation_t* valhalloc_logadd( void* pointer, char* comment, uint64_t size, const char* file, uint64_t line ) {
+    valhallocation_t* valhalloc_logadd( void* pointer, char* comment, uint64_t size, const char* file, uint64_t line ) {
         if ( !vh_valhallocations.capacity ) {
             fprintf( stderr, "[VALHALLOC FATAL]: you didn't call valhalloc_init()!!\n" );
             valhalloc_panic( EXIT_FAILURE );
@@ -179,7 +175,7 @@ extern "C" {
         return vh_a;
     }
 
-    static valhallocation_t* valhalloc_logammend( void* pointer, void* newpointer, const char* comment, uint64_t size, bool freed ) {
+    valhallocation_t* valhalloc_logammend( void* pointer, void* newpointer, const char* comment, uint64_t size, bool freed ) {
         valhallocation_t* a = valhalloc_logsearch( pointer );
         if ( !a ) {
             fprintf( vh_valhallocations.file, "[VALHALLOC ERROR]:  attempted to ammend address %p!!\n", pointer );
@@ -286,55 +282,74 @@ extern "C" {
 
 #   ifdef __cplusplus
 }
+void valhalloc_new( void* allocation, uint64_t size, const char* file, uint64_t line ) {
+    assert( allocation );
+    fprintf( vh_valhallocations.file, "[VALHALLOC STATUS]: allocated %llu bytes to %p @ %s:%llu\n", size, allocation, file, line );
+    valhalloc_logadd( allocation, NULL, size, file, line );
+}
+
+void valhalloc_delete( void* allocation, const char* file, uint64_t line ) {
+    if ( !allocation ) {
+        fprintf( vh_valhallocations.file, "[VALHALLOC WARN]:   called free(NULL) @ %s:%llu\n", file, line );
+        return;
+    }
+    fprintf( vh_valhallocations.file, "[VALHALLOC STATUS]: deallocating %p @ %s:%llu\n", allocation, file, line );
+    valhalloc_logammend( allocation, NULL, NULL, 0, true );
+}
 #   endif // __cplusplus
 
 #  endif // VALHALLOC_IMPLEMENTATION
 
-#   define VH_ALLOC(size)                valhalloc_alloc(size, __FILE__, __LINE__)
-#   define VH_REALLOC(allocation, size)  valhalloc_realloc(allocation, size, __FILE__, __LINE__)
-#   define VH_FREE(allocation)           valhalloc_dealloc(allocation, __FILE__, __LINE__)
-#   define VH_STATUS()                   valhalloc_status(__FILE__, __LINE__)
+#  define VH_ALLOC( size)                valhalloc_alloc(size, __FILE__, __LINE__)
+#  define VH_REALLOC( allocation, size )  valhalloc_realloc(allocation, size, __FILE__, __LINE__)
+#  define VH_DEALLOC( allocation )           valhalloc_dealloc(allocation, __FILE__, __LINE__)
+#  define VH_STATUS()                   valhalloc_status(__FILE__, __LINE__)
 
 #  ifdef __cplusplus
-inline void* operator new( size_t size, const char* file, int line ) {
-    return valhalloc_alloc( size, file, line );
-}
+// inline void* operator new( size_t size, const char* file, int line ) {
+//     return valhalloc_alloc( size, file, line );
+// }
 
-inline void* operator new[]( size_t size, const char* file, int line ) {
-    return valhalloc_alloc( size, file, line );
-}
+// inline void* operator new[]( size_t size, const char* file, int line ) {
+//     return valhalloc_alloc( size, file, line );
+// }
 
-inline void operator delete( void* ptr ) noexcept {
-    valhalloc_dealloc( ptr, "<delete>", 0 );
-}
+// inline void operator delete( void* ptr ) noexcept {
+//     valhalloc_dealloc( ptr, "<delete>", 0 );
+// }
 
-inline void operator delete[]( void* ptr ) noexcept {
-    valhalloc_dealloc( ptr, "<delete[]>", 0 );
-}
+// inline void operator delete[]( void* ptr ) noexcept {
+//     valhalloc_dealloc( ptr, "<delete[]>", 0 );
+// }
 
-inline void operator delete( void* ptr, size_t ) noexcept {
-    valhalloc_dealloc( ptr, "<delete sized (warning: not yet implemented properly)>", 0 );
-}
+// inline void operator delete( void* ptr, size_t ) noexcept {
+//     valhalloc_dealloc( ptr, "<delete sized (warning: not yet implemented properly)>", 0 );
+// }
 
-inline void operator delete[]( void* ptr, size_t ) noexcept {
-    valhalloc_dealloc( ptr, "<delete[] sized (warning: not yet implemented properly)>", 0 );
-}
-#   define VH_NEW                       new(__FILE__, __LINE__)
-#   define VH_DELETE                    delete
+// inline void operator delete[]( void* ptr, size_t ) noexcept {
+//     valhalloc_dealloc( ptr, "<delete[] sized (warning: not yet implemented properly)>", 0 );
+// }
+
+#   define VH_NEW( destination, constructor )              do { destination = new constructor; valhalloc_new(destination, sizeof * destination, __FILE__, __LINE__); } while ( 0 )
+#   define VH_NEW_ARRAY( destination, constructor, count ) do { destination = new constructor[count]; valhalloc_new(destination, (sizeof * destination) * count, __FILE__, __LINE__); } while ( 0 )
+#   define VH_DELETE( allocation )                         do { valhalloc_delete(allocation, __FILE__, __LINE__); delete allocation; } while ( 0 )
+#   define VH_DELETE_ARRAY( allocation )                   do { valhalloc_delete(allocation, __FILE__, __LINE__); delete[] allocation; } while ( 0 )
 #  endif // __cplusplus
 
 # else // !VALHALLOC_ENABLE
-#   define valhalloc_init(file) (void)NULL
-#   define valhalloc_logset(filename) (void)NULL;
-#   define valhalloc_deinit() (void)NULL
-#   define valhalloc_comment( allocation, comment ) (void)NULL
-#   define VH_STATUS() (void)NULL
-#   define VH_REALLOC(allocation, size) realloc(allocation, size)
-#   define VH_ALLOC(size)               malloc(size)
-#   define VH_FREE(allocation)          free(allocation)
+#   define valhalloc_init( file )                          (void)NULL
+#   define valhalloc_logset( filename )                    (void)NULL
+#   define valhalloc_deinit()                              (void)NULL
+#   define valhalloc_comment( allocation, comment )        (void)NULL
+#   define VH_STATUS()                                     (void)NULL
+#   define VH_REALLOC( allocation, size )                  realloc( allocation, size )
+#   define VH_ALLOC( size )                                malloc( size )
+#   define VH_DEALLOC( allocation )                           free( allocation )
 #  ifdef __cplusplus
-#   define VH_NEW new
-#   define VH_DELETE delete
+#   define VH_NEW( destination, constructor)               destination = new constructor
+#   define VH_NEW_ARRAY( destination, constructor, count)  destination = new constructor[count]
+#   define VH_DELETE(allocation)                           delete allocation
+#   define VH_DELETE_ARRAY(allocation)                     delete[] allocation
 #  endif // __cplusplus
 # endif // VALHALLOC_ENABLE
 #endif // VALHALLOC_H

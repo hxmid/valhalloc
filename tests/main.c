@@ -12,7 +12,7 @@ int main( void ) {
     strcpy( allocation, "Hi\n" );
     allocation = VH_REALLOC( allocation, 20 );
     printf( allocation );
-    VH_FREE( allocation );
+    VH_DEALLOC( allocation );
     do_an_allocation();
     valhalloc_deinit();
     return 0;
