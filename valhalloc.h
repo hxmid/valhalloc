@@ -300,36 +300,12 @@ void valhalloc_delete( void* allocation, const char* file, uint64_t line ) {
 
 #  endif // VALHALLOC_IMPLEMENTATION
 
-#  define VH_ALLOC( size)                valhalloc_alloc(size, __FILE__, __LINE__)
-#  define VH_REALLOC( allocation, size )  valhalloc_realloc(allocation, size, __FILE__, __LINE__)
-#  define VH_DEALLOC( allocation )           valhalloc_dealloc(allocation, __FILE__, __LINE__)
-#  define VH_STATUS()                   valhalloc_status(__FILE__, __LINE__)
+#  define VH_ALLOC( size)                                  valhalloc_alloc(size, __FILE__, __LINE__)
+#  define VH_REALLOC( allocation, size )                   valhalloc_realloc(allocation, size, __FILE__, __LINE__)
+#  define VH_DEALLOC( allocation )                         valhalloc_dealloc(allocation, __FILE__, __LINE__)
+#  define VH_STATUS()                                      valhalloc_status(__FILE__, __LINE__)
 
 #  ifdef __cplusplus
-// inline void* operator new( size_t size, const char* file, int line ) {
-//     return valhalloc_alloc( size, file, line );
-// }
-
-// inline void* operator new[]( size_t size, const char* file, int line ) {
-//     return valhalloc_alloc( size, file, line );
-// }
-
-// inline void operator delete( void* ptr ) noexcept {
-//     valhalloc_dealloc( ptr, "<delete>", 0 );
-// }
-
-// inline void operator delete[]( void* ptr ) noexcept {
-//     valhalloc_dealloc( ptr, "<delete[]>", 0 );
-// }
-
-// inline void operator delete( void* ptr, size_t ) noexcept {
-//     valhalloc_dealloc( ptr, "<delete sized (warning: not yet implemented properly)>", 0 );
-// }
-
-// inline void operator delete[]( void* ptr, size_t ) noexcept {
-//     valhalloc_dealloc( ptr, "<delete[] sized (warning: not yet implemented properly)>", 0 );
-// }
-
 #   define VH_NEW( destination, constructor )              do { destination = new constructor; valhalloc_new(destination, sizeof * destination, __FILE__, __LINE__); } while ( 0 )
 #   define VH_NEW_ARRAY( destination, constructor, count ) do { destination = new constructor[count]; valhalloc_new(destination, (sizeof * destination) * count, __FILE__, __LINE__); } while ( 0 )
 #   define VH_DELETE( allocation )                         do { valhalloc_delete(allocation, __FILE__, __LINE__); delete allocation; } while ( 0 )
@@ -337,19 +313,20 @@ void valhalloc_delete( void* allocation, const char* file, uint64_t line ) {
 #  endif // __cplusplus
 
 # else // !VALHALLOC_ENABLE
-#   define valhalloc_init( file )                          (void)NULL
-#   define valhalloc_logset( filename )                    (void)NULL
-#   define valhalloc_deinit()                              (void)NULL
-#   define valhalloc_comment( allocation, comment )        (void)NULL
-#   define VH_STATUS()                                     (void)NULL
-#   define VH_REALLOC( allocation, size )                  realloc( allocation, size )
-#   define VH_ALLOC( size )                                malloc( size )
-#   define VH_DEALLOC( allocation )                           free( allocation )
+#  define valhalloc_init( file )                           (void)NULL
+#  define valhalloc_logset( filename )                     (void)NULL
+#  define valhalloc_deinit()                               (void)NULL
+#  define valhalloc_comment( allocation, comment )         (void)NULL
+#  define VH_STATUS()                                      (void)NULL
+#  define VH_REALLOC( allocation, size )                   realloc( allocation, size )
+#  define VH_ALLOC( size )                                 malloc( size )
+#  define VH_DEALLOC( allocation )                         free( allocation )
 #  ifdef __cplusplus
-#   define VH_NEW( destination, constructor)               destination = new constructor
-#   define VH_NEW_ARRAY( destination, constructor, count)  destination = new constructor[count]
-#   define VH_DELETE(allocation)                           delete allocation
-#   define VH_DELETE_ARRAY(allocation)                     delete[] allocation
+#   define VH_NEW( destination, constructor )              destination = new constructor
+#   define VH_NEW_ARRAY( destination, constructor, count ) destination = new constructor[count]
+#   define VH_DELETE( allocation )                         delete allocation
+#   define VH_DELETE_ARRAY( allocation )                   delete[] allocation
 #  endif // __cplusplus
+#  define VH_NEW_REGRESSION new
 # endif // VALHALLOC_ENABLE
 #endif // VALHALLOC_H
